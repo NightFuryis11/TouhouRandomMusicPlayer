@@ -73,7 +73,7 @@ class CommandHandler():
         self.replay_text = "Replay Current Track"
         self.replay_color = "#3B9940"
         self.current_playback_progress = 0.0
-        self.current_album_image = f"{file_dir}/Placeholder.png"
+        self.current_album_image = f"{file_dir}/icon.png"
         self.current_track_total_duration = 1.0
         self.seek_dist = 0
         self.seek_ratio = 0
@@ -650,7 +650,7 @@ if __name__ == "__main__":
 
     app = App(commands, playlist)
     app.resizable(False, False)
-    icon_image, icon_size = ImgResize(f"{file_dir}/Placeholder.png", (128, 128))
+    icon_image, icon_size = ImgResize(f"{file_dir}/icon.png", (128, 128))
     icon = ImageTk.PhotoImage(icon_image, icon_size)
     app.iconphoto(True, icon)
     
