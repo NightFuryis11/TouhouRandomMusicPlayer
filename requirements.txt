@@ -1,0 +1,6 @@
+keyboard
+pyaudio
+numpy
+miniaudio
+customtkinter
+pillow
