@@ -1,0 +1,8 @@
+THRMP/Music/
+THRMP/AlbumImages/
+alter.py
+convert.py
+track_data_backup.json
+touhou_tracks.csv
+thrmp_env/
+.vscode/

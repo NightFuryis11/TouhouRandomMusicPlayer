@@ -1,4 +1,3 @@
-keyboard
 pyaudio
 numpy
 miniaudio
