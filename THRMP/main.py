@@ -80,6 +80,8 @@ class CommandHandler():
         self.track_change = 0
         self.track_change_val = 0
 
+        self.config_frame: Union[ConfigSubframe, None] = None
+
     def play_button_toggle(self):
         if self.is_playing:
             self.is_playing = False
@@ -214,7 +216,9 @@ class PlaylistHandler():
                     self.current_order = len(self.current_playlist)
                     self.current_playlist.append(self.current_id)
                 else:
-                    self.current_id += 1
+                    if self.current_id is None:
+                        self.current_id = "0"
+                    self.current_id = str(int(self.current_id) + 1)
                     self.current_order = len(self.current_playlist)
                     self.current_playlist.append(self.current_id)
                 self.playlist_frame.add_track_to_list(self.current_id)
@@ -239,7 +243,9 @@ class PlaylistHandler():
                 self.current_order = len(self.current_playlist)
                 self.current_playlist.append(self.current_id)
             else:
-                self.current_id += 1
+                if self.current_id is None:
+                        self.current_id = "0"
+                self.current_id = str(int(self.current_id) + 1)
                 self.current_order = len(self.current_playlist)
                 self.current_playlist.append(self.current_id)
             self.playlist_frame.add_track_to_list(self.current_id)
@@ -521,9 +527,72 @@ class InfoSubframe(ctk.CTkScrollableFrame):
 
         self.label.configure(text = label_text)
 
-class ConfigFrame(ctk.CTkScrollableFrame):
+class ConfigFrame(ctk.CTkFrame):
     def __init__(self, master, CH: CommandHandler, PH: PlaylistHandler):
         super().__init__(master)
+        self.CH = CH
+        self.PH = PH
+
+        self.grid_columnconfigure(0, weight = 1)
+        self.grid_rowconfigure(tuple(range(0, 15)), weight = 1)
+
+        self.subframe_1 = ConfigSubframe(self, CH, PH)
+        self.subframe_1.grid(row = 0, column = 0, rowspan = 14, padx = 15, pady = 15, sticky = "nsew")
+        self.subframe_1.configure(border_color = "#1E351A", border_width = 2, fg_color = "#CEFEC0")
+
+        self.subframe_2 = ConfigButtonframe(self, CH, PH)
+        self.subframe_2.grid(row = 14, column = 0, padx = 15, pady = 15, sticky = "nsew")
+        self.subframe_2.configure(border_color = "#1E351A", border_width = 2, fg_color = "#CEFEC0")
+
+class ConfigSubframe(ctk.CTkScrollableFrame):
+    def __init__(self, master, CH: CommandHandler, PH: PlaylistHandler):
+        super().__init__(master)
+        self.CH = CH
+        self.PH = PH
+        self.CH.config_frame = self
+
+        self.grid_columnconfigure(0, weight = 1)
+        self.grid_rowconfigure(tuple(range(0, 2)), weight = 1)
+
+        self.title_label = ctk.CTkLabel(self, text = "Config", font = ("Helvetica", 20, "bold"))
+        self.title_label.grid(row = 0, column = 0, padx = 5, pady = 5)
+
+        self.switch_rand = ctk.CTkSwitch(self, text = "Play tracks in order?")
+        self.switch_rand.grid(row = 1, column = 0, padx = 5, pady = 5)
+
+        self.switch_repeat = ctk.CTkSwitch(self, text = "Allow already-played tracks again?")
+        self.switch_repeat.grid(row = 2, column = 0, padx = 5, pady = 5)
+    
+    def get_config(self):
+        ret = {
+            "random": not bool(self.switch_rand.get()),
+            "allow_repeats": bool(self.switch_repeat.get())
+        }
+
+        return ret
+        
+
+class ConfigButtonframe(ctk.CTkFrame):
+    def __init__(self, master, CH: CommandHandler, PH: PlaylistHandler):
+        super().__init__(master)
+        self.CH = CH
+        self.PH = PH
+
+        self.grid_columnconfigure(0, weight = 1)
+        self.grid_rowconfigure(0, weight = 1)
+
+        self.button = ctk.CTkButton(self, width = 0, height = 0, text = "Apply Config Settings", command = self.button_press, fg_color = "#3B7D40", border_color = "#0F120D", border_width = 2)
+        self.button.grid(row = 0, column = 0, padx = 5, pady = 5)
+    
+    def button_press(self):
+        self.button.configure(text = "Config Updated!")
+        self.CH.set_flag("update_config")
+
+        self.after(3000, self.button_unpress)
+    
+    def button_unpress(self):
+        self.button.configure(text = "Apply Config Settings")
+
 
 
 def track_change_id(track_id: str, CH: CommandHandler):
@@ -563,14 +632,14 @@ def track_change(PAengine: pyaudio.PyAudio, CH: CommandHandler, PH: PlaylistHand
 def audio_handler(app: App, CH: CommandHandler, PH: PlaylistHandler, audio_kill: threading.Event):
     
     PAengine = pyaudio.PyAudio()
-    cfg = read_config()
+    cfg = CH.config_frame.get_config()
     file = None
 
     while app.winfo_exists():
         #print(PH.read("current_order"), PH.read("current_id"), CH.read("current_track"))
 
         if CH.consume_flag("update_config"):
-            cfg = read_config()
+            cfg = CH.config_frame.get_config()
 
         if CH.read("track_change"):
             mode = CH.consume_val("track_change")
@@ -602,9 +671,6 @@ def audio_handler(app: App, CH: CommandHandler, PH: PlaylistHandler, audio_kill:
                 else:
                     CH.send("track_change", "relative")
                     CH.send("track_change_val", 1)
-
-def read_config() -> dict:
-    return {"random": True, "allow_repeats": False}
 
 def ImgResize(image_path : str, target_dim : tuple):
     preview_image = Image.open(image_path)#.convert("RGBA")
